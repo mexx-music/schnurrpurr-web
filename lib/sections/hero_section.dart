@@ -49,9 +49,7 @@ class HeroSection extends StatelessWidget {
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: isWide ? 1080 : 540),
-                  child: isWide
-                      ? _WideLayout()
-                      : _NarrowLayout(),
+                  child: isWide ? _WideLayout() : _NarrowLayout(),
                 ),
               ),
             ),
@@ -73,16 +71,10 @@ class _WideLayout extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // ── Left: text + buttons ──────────────────────────
-        const Expanded(
-          flex: 11,
-          child: _HeroTextContent(isWide: true),
-        ),
+        const Expanded(flex: 11, child: _HeroTextContent(isWide: true)),
         const SizedBox(width: 48),
         // ── Right: product preview ────────────────────────
-        Expanded(
-          flex: 7,
-          child: _ProductPreviewCard(imageHeight: 160),
-        ),
+        Expanded(flex: 7, child: _ProductPreviewCard(imageHeight: 160)),
       ],
     );
   }
@@ -155,8 +147,16 @@ class _HeroTextContent extends StatelessWidget {
           spacing: 14,
           runSpacing: 14,
           children: [
-            _HoverCtaButton(label: 'App Store', icon: Icons.apple, onPressed: () {}),
-            _HoverCtaButton(label: 'Google Play', icon: Icons.android, onPressed: () {}),
+            _HoverCtaButton(
+              label: 'App Store',
+              icon: Icons.apple,
+              onPressed: () {},
+            ),
+            _HoverCtaButton(
+              label: 'Google Play',
+              icon: Icons.android,
+              onPressed: () {},
+            ),
             const _ComingSoonBadge(),
           ],
         ),
@@ -195,33 +195,56 @@ class _ProductPreviewCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black.withAlpha(80),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: AppColors.gold.withAlpha(45),
-                width: 1,
-              ),
+              border: Border.all(color: AppColors.gold.withAlpha(45), width: 1),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Product images row ───────────────────
-                Row(
-                  children: [
-                    Expanded(
-                      child: _PreviewImage(
-                        assetPath: 'assets/images/pillow.png',
-                        height: imageHeight,
-                        rotationDeg: -4,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _PreviewImage(
-                        assetPath: 'assets/images/purrmodul.png',
-                        height: imageHeight,
-                        rotationDeg: 4,
-                      ),
-                    ),
-                  ],
+                // ── Product images row: Pillow | App | Module ────
+                // Phone has a fixed width so it is never squeezed by Expanded.
+                // Pillow and Module use Expanded to fill remaining space.
+                Builder(
+                  builder: (context) {
+                    // imageHeight 160 (desktop) → 85 px phone  (~184 px tall)
+                    // imageHeight 120 (mobile)  → 72 px phone  (~156 px tall)
+                    final phoneWidth = imageHeight >= 140 ? 85.0 : 72.0;
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Pillow — fills left space
+                        Expanded(
+                          child: _PreviewImage(
+                            assetPath: 'assets/images/pillow.png',
+                            height: imageHeight * 1.30,
+                            rotationDeg: -4,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // App screenshot — fixed-width phone, never squished
+                        // Shifted 8 px down so bottom sits slightly below pillow baseline.
+                        Transform.translate(
+                          offset: const Offset(0, 8),
+                          child: _MiniPhoneMockup(
+                            imagePath: 'assets/images/screens/s2.png',
+                            phoneWidth: phoneWidth,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Core Module — fills right space
+                        // +10 % scale, shifted 12 px up for visual balance.
+                        Expanded(
+                          child: Transform.translate(
+                            offset: const Offset(0, -12),
+                            child: _PreviewImage(
+                              assetPath: 'assets/images/purrmodul.png',
+                              height: imageHeight * 1.07,
+                              rotationDeg: 4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
                 // ── Thin gold divider ────────────────────
@@ -255,7 +278,7 @@ class _ProductPreviewCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Cozy pillow + calming core module',
+                  'App + cozy pillow + calming core module',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary.withAlpha(200),
@@ -307,11 +330,85 @@ class _PreviewImageState extends State<_PreviewImage> {
           angle: widget.rotationDeg * 3.14159 / 180,
           child: SizedBox(
             height: widget.height,
-            child: Image.asset(
-              widget.assetPath,
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset(widget.assetPath, fit: BoxFit.contain),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Mini phone mockup for preview card
+// ─────────────────────────────────────────────
+
+class _MiniPhoneMockup extends StatelessWidget {
+  final String imagePath;
+  final double phoneWidth;
+
+  const _MiniPhoneMockup({required this.imagePath, required this.phoneWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    final w = phoneWidth;
+    final radius = w * 0.18;
+    final padH = (w * 0.06).clamp(3.0, 8.0);
+    final padTop = (w * 0.07).clamp(4.0, 10.0);
+    final padBottom = (w * 0.05).clamp(3.0, 8.0);
+
+    return Container(
+      width: w,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.gold.withAlpha(180), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withAlpha(60),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withAlpha(130),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(padH, padTop, padH, padBottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Dynamic island
+            Container(
+              width: w * 0.3,
+              height: (w * 0.034).clamp(3.5, 7.0),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            SizedBox(height: (w * 0.03).clamp(2.0, 5.0)),
+            // Screen
+            ClipRRect(
+              borderRadius: BorderRadius.circular(w * 0.09),
+              child: AspectRatio(
+                aspectRatio: 9 / 19.5,
+                child: Image.asset(imagePath, fit: BoxFit.cover),
+              ),
+            ),
+            SizedBox(height: (w * 0.04).clamp(2.0, 6.0)),
+            // Home indicator
+            Container(
+              width: w * 0.32,
+              height: (w * 0.024).clamp(2.5, 5.0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3A3A3A),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -401,7 +498,13 @@ class _HoverCtaButtonState extends State<_HoverCtaButton> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           boxShadow: _hovered
-              ? [BoxShadow(color: AppColors.primary.withAlpha(120), blurRadius: 20, spreadRadius: 2)]
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha(120),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ]
               : [],
         ),
         child: ElevatedButton.icon(
@@ -409,11 +512,18 @@ class _HoverCtaButtonState extends State<_HoverCtaButton> {
           icon: Icon(widget.icon, size: 20),
           label: Text(widget.label),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _hovered ? AppColors.primary.withAlpha(230) : AppColors.primary,
+            backgroundColor: _hovered
+                ? AppColors.primary.withAlpha(230)
+                : AppColors.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
