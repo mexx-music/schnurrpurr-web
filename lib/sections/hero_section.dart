@@ -153,8 +153,8 @@ class _NarrowLayout extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const _HeroTextContent(isWide: false),
-        const SizedBox(height: 28),
-        _ProductScene(sceneHeight: 300, compact: true),
+        const SizedBox(height: 14),
+        _ProductScene(sceneHeight: 240, compact: true),
         const SizedBox(height: 12),
         _SceneLabel(),
       ],
