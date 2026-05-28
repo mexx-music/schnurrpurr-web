@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -20,13 +21,23 @@ class HeroSection extends StatefulWidget {
   State<HeroSection> createState() => _HeroSectionState();
 }
 
-// TODO: connect HeroItemConfig values to product Positioned offsets in _ProductScene.
 class _HeroSectionState extends State<HeroSection> {
-  late final HeroEditorState? _editorState =
-      kHeroEditorEnabled ? HeroEditorState() : null;
+  HeroEditorState? _editorState;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kHeroEditorEnabled) {
+      _editorState = HeroEditorState();
+      _editorState!.addListener(_onEditorChanged);
+    }
+  }
+
+  void _onEditorChanged() => setState(() {});
 
   @override
   void dispose() {
+    _editorState?.removeListener(_onEditorChanged);
     _editorState?.dispose();
     super.dispose();
   }
@@ -34,14 +45,15 @@ class _HeroSectionState extends State<HeroSection> {
   @override
   Widget build(BuildContext context) {
     final body = _buildBody(context);
-    if (!kHeroEditorEnabled || _editorState == null) return body;
+    final editor = _editorState;
+    if (editor == null) return body;
     // body (non-positioned) sizes the Stack; the overlay is pinned to that
     // size with Positioned.fill so it gets bounded constraints even though the
     // hero lives in an unbounded-height page scroll.
     return Stack(
       children: [
         body,
-        Positioned.fill(child: HeroEditorOverlay(state: _editorState)),
+        Positioned.fill(child: HeroEditorOverlay(state: editor)),
       ],
     );
   }
@@ -139,7 +151,17 @@ class _HeroSectionState extends State<HeroSection> {
                       constraints: BoxConstraints(
                         maxWidth: isWide ? 1200 : 560,
                       ),
-                      child: isWide ? _WideLayout() : _NarrowLayout(),
+                      child: isWide
+                          ? _WideLayout(
+                              pillowConfig: _editorState?.pillowConfig,
+                              moduleConfig: _editorState?.moduleConfig,
+                              phoneConfig: _editorState?.phoneConfig,
+                            )
+                          : _NarrowLayout(
+                              pillowConfig: _editorState?.pillowConfig,
+                              moduleConfig: _editorState?.moduleConfig,
+                              phoneConfig: _editorState?.phoneConfig,
+                            ),
                     ),
                   ],
                 ),
@@ -157,6 +179,11 @@ class _HeroSectionState extends State<HeroSection> {
 // ─────────────────────────────────────────────
 
 class _WideLayout extends StatelessWidget {
+  final HeroItemConfig? pillowConfig;
+  final HeroItemConfig? moduleConfig;
+  final HeroItemConfig? phoneConfig;
+  const _WideLayout({this.pillowConfig, this.moduleConfig, this.phoneConfig});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -169,7 +196,12 @@ class _WideLayout extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _ProductScene(sceneHeight: 400),
+              _ProductScene(
+                sceneHeight: 400,
+                pillowConfig: pillowConfig,
+                moduleConfig: moduleConfig,
+                phoneConfig: phoneConfig,
+              ),
               const SizedBox(height: 14),
               _SceneLabel(),
             ],
@@ -185,6 +217,11 @@ class _WideLayout extends StatelessWidget {
 // ─────────────────────────────────────────────
 
 class _NarrowLayout extends StatelessWidget {
+  final HeroItemConfig? pillowConfig;
+  final HeroItemConfig? moduleConfig;
+  final HeroItemConfig? phoneConfig;
+  const _NarrowLayout({this.pillowConfig, this.moduleConfig, this.phoneConfig});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -192,7 +229,13 @@ class _NarrowLayout extends StatelessWidget {
       children: [
         const _HeroTextContent(isWide: false),
         const SizedBox(height: 14),
-        _ProductScene(sceneHeight: 240, compact: true),
+        _ProductScene(
+          sceneHeight: 240,
+          compact: true,
+          pillowConfig: pillowConfig,
+          moduleConfig: moduleConfig,
+          phoneConfig: phoneConfig,
+        ),
         const SizedBox(height: 12),
         _SceneLabel(),
       ],
@@ -206,15 +249,25 @@ class _NarrowLayout extends StatelessWidget {
 
 class _ProductScene extends StatelessWidget {
   final double sceneHeight;
-  // Portrait/mobile: smaller pillow, taller phone, gap kept open.
   final bool compact;
-  const _ProductScene({required this.sceneHeight, this.compact = false});
+  // Null when the editor is disabled — all transforms default to identity.
+  final HeroItemConfig? pillowConfig;
+  final HeroItemConfig? moduleConfig;
+  final HeroItemConfig? phoneConfig;
+  const _ProductScene({
+    required this.sceneHeight,
+    this.compact = false,
+    this.pillowConfig,
+    this.moduleConfig,
+    this.phoneConfig,
+  });
 
   // Bottom transparent padding of each PNG, as a fraction of the displayed
   // width (measured from the asset alpha bounds). Lets us align the *visible*
   // feet on one ground line instead of the raw image boxes.
   static const double _pillowFoot = 0.111; // pillow.png
-  static const double _moduleFoot = 0.35; // purrmodul.png — body base, not the dangling strap
+  static const double _moduleFoot =
+      0.35; // purrmodul.png — body base, not the dangling strap
 
   @override
   Widget build(BuildContext context) {
@@ -223,88 +276,124 @@ class _ProductScene extends StatelessWidget {
         final w = constraints.maxWidth;
         final h = sceneHeight;
 
-        // Relative sizes: pillow dominates, module medium, phone smallest.
-        // Compact (portrait) shrinks the pillow and grows the phone a touch.
-        final pillowW = (w * (compact ? 0.46 : 0.52)).clamp(110.0, 290.0);
-        final moduleW = (w * (compact ? 0.40 : 0.38)).clamp(96.0, 205.0);
-        final phoneW = (w * (compact ? 0.27 : 0.24)).clamp(72.0, 150.0);
+        // ── Base sizes — editor scale applied multiplicatively ──────────────
+        // When editor is disabled, configs are null and scale defaults to 1.0.
+        final pillowW =
+            (w * (compact ? 0.46 : 0.52)).clamp(110.0, 290.0) *
+            (pillowConfig?.scale ?? 1.0);
+        final moduleW =
+            (w * (compact ? 0.40 : 0.38)).clamp(96.0, 205.0) *
+            (moduleConfig?.scale ?? 1.0);
+        final phoneW =
+            (w * (compact ? 0.27 : 0.24)).clamp(72.0, 150.0) *
+            (phoneConfig?.scale ?? 1.0);
 
-        // Horizontal: pillow left, module centre-front.
-        final pillowLeft = -w * 0.02;
-        final moduleLeft = w * (compact ? 0.25 : 0.27);
-        final moduleVisRight = moduleLeft + moduleW * 0.856; // 599/700
+        // ── Editor x / y offsets (0 when editor is disabled) ────────────────
+        // Positive y = down in screen coords → subtract from Positioned.bottom.
+        final pillowDx = pillowConfig?.x ?? 0.0;
+        final pillowDy = pillowConfig?.y ?? 0.0;
+        final moduleDx = moduleConfig?.x ?? 0.0;
+        final moduleDy = moduleConfig?.y ?? 0.0;
+        final phoneDx = phoneConfig?.x ?? 0.0;
+        final phoneDy = phoneConfig?.y ?? 0.0;
 
-        // Phone placement. Desktop keeps its fixed right margin (unchanged);
-        // compact anchors the phone a fixed gap right of the module so the
-        // gap can't collapse at narrow widths (clamped min sizes would eat it).
-        final phoneRight = w * 0.15;
+        // ── Editor rotations — additive on top of any built-in angle ────────
+        final pillowRotRad =
+            (pillowConfig?.rotationDeg ?? 0.0) * (math.pi / 180);
+        final moduleRotRad =
+            (moduleConfig?.rotationDeg ?? 0.0) * (math.pi / 180);
+        // Phone keeps its built-in 2.5° tilt; editor adds on top.
+        final phoneRotRad =
+            0.045 + (phoneConfig?.rotationDeg ?? 0.0) * (math.pi / 180);
+
+        // ── Horizontal base positions ────────────────────────────────────────
+        final pillowLeft = -w * 0.02 + pillowDx;
+        final moduleLeft = w * (compact ? 0.25 : 0.27) + moduleDx;
+        final moduleVisRight = moduleLeft + moduleW * 0.856; // 599/700 ratio
+
+        // Phone: desktop uses a right margin; compact anchors to the module.
+        final phoneBaseRight = w * 0.15;
         final phoneGap = (w * 0.03).clamp(14.0, 60.0);
-        final phoneLeft = moduleVisRight + phoneGap;
+        final phoneBaseLeft = moduleVisRight + phoneGap;
 
-        // One shared ground line — every product's *visible* bottom lands
-        // here, so all three share the same baseline. Lifted enough that the
-        // module's dangling strap still rests above the scene floor.
+        // ── Ground line & vertical positions ────────────────────────────────
         final baseLine = h * 0.10;
-        final pillowBottom = baseLine - pillowW * _pillowFoot;
-        final moduleBottom = baseLine - moduleW * _moduleFoot;
-        final phoneBottom = baseLine;
+        final pillowBottom = baseLine - pillowW * _pillowFoot - pillowDy;
+        final moduleBottom = baseLine - moduleW * _moduleFoot - moduleDy;
+        final phoneBottom = baseLine - phoneDy;
 
-        // Visible-centre x of each product (for glow + contact shadows).
+        // ── Visible-centre x (for glow rings + contact shadows) ─────────────
         final pillowCx = pillowLeft + pillowW * 0.47;
         final moduleCx = moduleLeft + moduleW * 0.48;
-        final phoneCx =
-            compact ? phoneLeft + phoneW / 2 : w - phoneRight - phoneW / 2;
+        // Non-compact: right: phoneBaseRight - phoneDx  →  center follows.
+        final phoneCx = compact
+            ? phoneBaseLeft + phoneDx + phoneW / 2
+            : w - phoneBaseRight + phoneDx - phoneW / 2;
 
         final glowSize = moduleW * 2.2;
 
         return SizedBox(
           width: w,
           height: h,
-          // Clip.none keeps the tilted phone, the glow and the soft
-          // shadows from ever being cut off.
+          // Clip.none keeps tilted products, glow rings and soft shadows
+          // from being cut off at the scene boundaries.
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // ── Ambient golden purr-waves around the module ──
+              // ── Ambient golden purr-waves around the module ──────────────
               Positioned(
                 left: moduleCx - glowSize / 2,
-                bottom: baseLine + moduleW * 0.20 - glowSize / 2,
+                // Track the module vertically too (editor moduleDy) so the
+                // aura moves with the module when nudged.
+                bottom: baseLine + moduleW * 0.20 - moduleDy - glowSize / 2,
                 child: _GlowRings(size: glowSize),
               ),
 
-              // ── Pillow contact shadow (on the shared ground line) ──
+              // ── Pillow contact shadow ────────────────────────────────────
               Positioned(
                 left: pillowCx - (pillowW * 0.66) / 2,
-                bottom: baseLine - 10,
-                child: _GroundShadow(width: pillowW * 0.66, height: 24, alpha: 110),
+                bottom: baseLine - 10 - pillowDy,
+                child: _GroundShadow(
+                  width: pillowW * 0.66,
+                  height: 24,
+                  alpha: 110,
+                ),
               ),
-              // ── Phone contact shadow ──
+              // ── Phone contact shadow ─────────────────────────────────────
               Positioned(
                 left: phoneCx - (phoneW * 1.05) / 2,
-                bottom: baseLine - 8,
-                child: _GroundShadow(width: phoneW * 1.05, height: 18, alpha: 105),
-              ),
-
-              // ── Pillow — largest element, left ──
-              Positioned(
-                left: pillowLeft,
-                bottom: pillowBottom,
-                child: _SceneProduct(
-                  assetPath: 'assets/images/pillow.png',
-                  width: pillowW,
-                  shadowAlpha: 80,
-                  shadowBlur: 16,
-                  shadowOffset: const Offset(10, 14),
+                bottom: baseLine - 8 - phoneDy,
+                child: _GroundShadow(
+                  width: phoneW * 1.05,
+                  height: 18,
+                  alpha: 105,
                 ),
               ),
 
-              // ── Phone — close to module, slight tilt, never clipped ──
+              // ── Pillow — largest element, left ───────────────────────────
               Positioned(
-                left: compact ? phoneLeft : null,
-                right: compact ? null : phoneRight,
+                left: pillowLeft,
+                bottom: pillowBottom,
+                child: Transform.rotate(
+                  angle: pillowRotRad,
+                  alignment: Alignment.bottomCenter,
+                  child: _SceneProduct(
+                    assetPath: 'assets/images/pillow.png',
+                    width: pillowW,
+                    shadowAlpha: 80,
+                    shadowBlur: 16,
+                    shadowOffset: const Offset(10, 14),
+                  ),
+                ),
+              ),
+
+              // ── Phone — close to module, slight tilt, never clipped ──────
+              Positioned(
+                left: compact ? phoneBaseLeft + phoneDx : null,
+                right: compact ? null : phoneBaseRight - phoneDx,
                 bottom: phoneBottom,
                 child: Transform.rotate(
-                  angle: 0.045, // ≈ 2.5°
+                  angle: phoneRotRad,
                   alignment: Alignment.bottomCenter,
                   child: _PhoneInScene(
                     imagePath: 'assets/images/screens/s2.png',
@@ -313,22 +402,30 @@ class _ProductScene extends StatelessWidget {
                 ),
               ),
 
-              // ── Module contact shadow (drawn in front of the pillow) ──
+              // ── Module contact shadow (in front of pillow) ───────────────
               Positioned(
                 left: moduleCx - (moduleW * 0.68) / 2,
-                bottom: baseLine - 8,
-                child: _GroundShadow(width: moduleW * 0.68, height: 22, alpha: 135),
+                bottom: baseLine - 8 - moduleDy,
+                child: _GroundShadow(
+                  width: moduleW * 0.68,
+                  height: 22,
+                  alpha: 135,
+                ),
               ),
-              // ── Module — centre-front focal point, in front of pillow ──
+              // ── Module — centre-front focal point ────────────────────────
               Positioned(
                 left: moduleLeft,
                 bottom: moduleBottom,
-                child: _SceneProduct(
-                  assetPath: 'assets/images/purrmodul.png',
-                  width: moduleW,
-                  shadowAlpha: 120,
-                  shadowBlur: 12,
-                  shadowOffset: const Offset(8, 10),
+                child: Transform.rotate(
+                  angle: moduleRotRad,
+                  alignment: Alignment.bottomCenter,
+                  child: _SceneProduct(
+                    assetPath: 'assets/images/purrmodul.png',
+                    width: moduleW,
+                    shadowAlpha: 120,
+                    shadowBlur: 12,
+                    shadowOffset: const Offset(8, 10),
+                  ),
                 ),
               ),
             ],
@@ -426,26 +523,26 @@ class _SceneProductState extends State<_SceneProduct> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-            // Silhouette drop shadow — follows the product outline,
-            // so there is no rectangular "card" halo behind the PNG.
-            Transform.translate(
-              offset: widget.shadowOffset,
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(
-                  sigmaX: widget.shadowBlur,
-                  sigmaY: widget.shadowBlur,
-                ),
-                child: ColorFiltered(
-                  colorFilter: ColorFilter.mode(
-                    Colors.black.withAlpha(widget.shadowAlpha),
-                    BlendMode.srcIn,
+              // Silhouette drop shadow — follows the product outline,
+              // so there is no rectangular "card" halo behind the PNG.
+              Transform.translate(
+                offset: widget.shadowOffset,
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(
+                    sigmaX: widget.shadowBlur,
+                    sigmaY: widget.shadowBlur,
                   ),
-                  child: image,
+                  child: ColorFiltered(
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withAlpha(widget.shadowAlpha),
+                      BlendMode.srcIn,
+                    ),
+                    child: image,
+                  ),
                 ),
               ),
-            ),
-            image,
-          ],
+              image,
+            ],
           ),
         ),
       ),
@@ -498,16 +595,13 @@ class _GlowRings extends StatelessWidget {
   }
 
   Widget _ring(double diameter, int alpha) => Container(
-        width: diameter,
-        height: diameter,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.gold.withAlpha(alpha),
-            width: 1.4,
-          ),
-        ),
-      );
+    width: diameter,
+    height: diameter,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: AppColors.gold.withAlpha(alpha), width: 1.4),
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────
@@ -547,72 +641,69 @@ class _PhoneInSceneState extends State<_PhoneInScene> {
           alignment: Alignment.bottomCenter,
           scale: _pressed ? 1.06 : (_hovered ? 1.04 : 1.0),
           child: Container(
-          width: w,
-          decoration: BoxDecoration(
-            color: const Color(0xFF111113),
-            borderRadius: BorderRadius.circular(radius),
-            // Thin neutral rim — reads as a real device, not a UI card.
-            border: Border.all(
-              color: Colors.white.withAlpha(22),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(150),
-                blurRadius: 34,
-                offset: const Offset(6, 20),
-              ),
-              // Barely-there warm ambient bounce from the module glow.
-              BoxShadow(
-                color: AppColors.gold.withAlpha(14),
-                blurRadius: 26,
-                spreadRadius: 1,
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              w * 0.05,
-              w * 0.06,
-              w * 0.05,
-              w * 0.045,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Dynamic island
-                Container(
-                  width: w * 0.28,
-                  height: (w * 0.030).clamp(3.0, 7.0),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+            width: w,
+            decoration: BoxDecoration(
+              color: const Color(0xFF111113),
+              borderRadius: BorderRadius.circular(radius),
+              // Thin neutral rim — reads as a real device, not a UI card.
+              border: Border.all(color: Colors.white.withAlpha(22), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(150),
+                  blurRadius: 34,
+                  offset: const Offset(6, 20),
                 ),
-                SizedBox(height: (w * 0.024).clamp(2.0, 5.0)),
-                // Screen content
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(w * 0.08),
-                  child: AspectRatio(
-                    aspectRatio: 9 / 19.5,
-                    child: Image.asset(widget.imagePath, fit: BoxFit.cover),
-                  ),
-                ),
-                SizedBox(height: (w * 0.034).clamp(2.0, 6.0)),
-                // Home indicator bar
-                Container(
-                  width: w * 0.30,
-                  height: (w * 0.022).clamp(2.5, 5.0),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3A3A3A),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
+                // Barely-there warm ambient bounce from the module glow.
+                BoxShadow(
+                  color: AppColors.gold.withAlpha(14),
+                  blurRadius: 26,
+                  spreadRadius: 1,
                 ),
               ],
             ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                w * 0.05,
+                w * 0.06,
+                w * 0.05,
+                w * 0.045,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Dynamic island
+                  Container(
+                    width: w * 0.28,
+                    height: (w * 0.030).clamp(3.0, 7.0),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  SizedBox(height: (w * 0.024).clamp(2.0, 5.0)),
+                  // Screen content
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(w * 0.08),
+                    child: AspectRatio(
+                      aspectRatio: 9 / 19.5,
+                      child: Image.asset(widget.imagePath, fit: BoxFit.cover),
+                    ),
+                  ),
+                  SizedBox(height: (w * 0.034).clamp(2.0, 6.0)),
+                  // Home indicator bar
+                  Container(
+                    width: w * 0.30,
+                    height: (w * 0.022).clamp(2.5, 5.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3A3A3A),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -683,8 +774,9 @@ class _HeroTextContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment:
-          isWide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      crossAxisAlignment: isWide
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       children: [
         _GlowHeadline(isWide: isWide),
         const SizedBox(height: 22),
@@ -709,9 +801,7 @@ class _HeroTextContent extends StatelessWidget {
               fontSize: isWide ? 17 : 16,
               color: AppColors.textSecondary,
               height: 1.7,
-              shadows: const [
-                Shadow(color: Color(0xAA000000), blurRadius: 6),
-              ],
+              shadows: const [Shadow(color: Color(0xAA000000), blurRadius: 6)],
             ),
           ),
         ),
