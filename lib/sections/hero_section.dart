@@ -26,80 +26,89 @@ class HeroSection extends StatelessWidget {
 
     return SizedBox(
       width: double.infinity,
-      height: heroHeight,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── Background ────────────────────────────────────
-          Image.asset(bgAsset, fit: BoxFit.cover),
-
-          // ── Warm vertical depth overlay ───────────────────
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xC40D0804),
-                  Color(0x601A1008),
-                  Color(0x381A0E12),
-                ],
-                stops: [0.0, 0.55, 1.0],
+      // Min-height only — never a fixed full-screen height, and no inner
+      // scroll view. The hero grows naturally with its content and the
+      // page's own SingleChildScrollView does the scrolling, so it can
+      // never trap the scroll gesture on mobile portrait.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: heroHeight),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // ── Background ── decorative: must not absorb touch/scroll.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Image.asset(bgAsset, fit: BoxFit.cover),
               ),
             ),
-          ),
 
-          // ── Left-side darkening for text legibility ────────
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xBB0D0804),
-                  Color(0x4A0D0804),
-                  Colors.transparent,
-                ],
-                stops: [0.0, 0.52, 1.0],
-              ),
-            ),
-          ),
-
-          // ── Content (centred within the safe area, scrolls if too tall) ──
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                child: ConstrainedBox(
-                  // Centre within the *available* (safe-area) height so the
-                  // notch / home-indicator and short iPhone-Safari viewports
-                  // never clip the content; it simply scrolls if it can't fit.
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isWide ? 56 : 24,
-                      vertical: isWide ? 40 : 28,
-                    ),
-                    // MainAxisAlignment.center + the min-height above centre
-                    // the block; the leading spacer nudges it down toward the
-                    // table on roomy (wide) viewports.
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (isWide) SizedBox(height: heroHeight * 0.12),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: isWide ? 1200 : 560,
-                          ),
-                          child: isWide ? _WideLayout() : _NarrowLayout(),
-                        ),
+            // ── Warm vertical depth overlay ──
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xC40D0804),
+                        Color(0x601A1008),
+                        Color(0x381A0E12),
                       ],
+                      stops: [0.0, 0.55, 1.0],
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            // ── Left-side darkening for text legibility ──
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Color(0xBB0D0804),
+                        Color(0x4A0D0804),
+                        Colors.transparent,
+                      ],
+                      stops: [0.0, 0.52, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Content — sizes the hero (min-height applies) and centres
+            //    itself. No inner scroll view, so the page scroll stays free. ──
+            SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWide ? 56 : 24,
+                  vertical: isWide ? 40 : 28,
+                ),
+                // The leading spacer nudges the block down toward the table
+                // on roomy (wide) viewports; centred by the surrounding Stack.
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isWide) SizedBox(height: heroHeight * 0.12),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isWide ? 1200 : 560,
+                      ),
+                      child: isWide ? _WideLayout() : _NarrowLayout(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
