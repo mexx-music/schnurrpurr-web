@@ -8,7 +8,7 @@ import '../debug/hero_editor_overlay.dart';
 
 /// Set to [false] before building for release — the overlay renders nothing
 /// and the [HeroEditorState] is never allocated.
-const bool kHeroEditorEnabled = true;
+const bool kHeroEditorEnabled = false;
 
 // ─────────────────────────────────────────────
 //  HeroSection
@@ -286,16 +286,20 @@ class _ProductScene extends StatelessWidget {
             (moduleConfig?.scale ?? 1.0);
         final phoneW =
             (w * (compact ? 0.27 : 0.24)).clamp(72.0, 150.0) *
+            (compact ? 0.9 : 1.0) * // baked Hero Editor scale (mobile)
             (phoneConfig?.scale ?? 1.0);
 
-        // ── Editor x / y offsets (0 when editor is disabled) ────────────────
+        // ── Baked Hero Editor fine-tune (mobile/portrait) + live editor ─────
+        // The baked constants reproduce the approved mobile placement without
+        // the editor; the (config?.x ?? 0) term stays so the editor still
+        // nudges from here when re-enabled. Desktop (wide) is left untouched.
         // Positive y = down in screen coords → subtract from Positioned.bottom.
-        final pillowDx = pillowConfig?.x ?? 0.0;
-        final pillowDy = pillowConfig?.y ?? 0.0;
-        final moduleDx = moduleConfig?.x ?? 0.0;
-        final moduleDy = moduleConfig?.y ?? 0.0;
-        final phoneDx = phoneConfig?.x ?? 0.0;
-        final phoneDy = phoneConfig?.y ?? 0.0;
+        final pillowDx = (compact ? 25.0 : 0.0) + (pillowConfig?.x ?? 0.0);
+        final pillowDy = (compact ? 15.0 : 0.0) + (pillowConfig?.y ?? 0.0);
+        final moduleDx = (compact ? 35.0 : 0.0) + (moduleConfig?.x ?? 0.0);
+        final moduleDy = (compact ? 25.0 : 0.0) + (moduleConfig?.y ?? 0.0);
+        final phoneDx = (compact ? -15.0 : 0.0) + (phoneConfig?.x ?? 0.0);
+        final phoneDy = (compact ? 35.0 : 0.0) + (phoneConfig?.y ?? 0.0);
 
         // ── Editor rotations — additive on top of any built-in angle ────────
         final pillowRotRad =
