@@ -297,11 +297,11 @@ class _ProductScene extends StatelessWidget {
         // nudges from here when re-enabled. Desktop (wide) is never baked.
         // Positive y = down in screen coords → subtract from Positioned.bottom.
         final pillowDx = (compact ? 15.0 : 0.0) + (pillowConfig?.x ?? 0.0);
-        final pillowDy = (compact ? -60.0 : 0.0) + (pillowConfig?.y ?? 0.0);
+        final pillowDy = (compact ? -60.0 : 55.0) + (pillowConfig?.y ?? 0.0);
         final moduleDx = (compact ? 20.0 : 0.0) + (moduleConfig?.x ?? 0.0);
-        final moduleDy = (compact ? -55.0 : 0.0) + (moduleConfig?.y ?? 0.0);
-        final phoneDx = (compact ? -15.0 : 0.0) + (phoneConfig?.x ?? 0.0);
-        final phoneDy = (compact ? -45.0 : 0.0) + (phoneConfig?.y ?? 0.0);
+        final moduleDy = (compact ? -55.0 : 65.0) + (moduleConfig?.y ?? 0.0);
+        final phoneDx = (compact ? -15.0 : -10.0) + (phoneConfig?.x ?? 0.0);
+        final phoneDy = (compact ? -45.0 : 70.0) + (phoneConfig?.y ?? 0.0);
 
         // ── Editor rotations — additive on top of any built-in angle ────────
         final pillowRotRad =
