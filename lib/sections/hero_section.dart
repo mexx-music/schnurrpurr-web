@@ -2,16 +2,45 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../debug/hero_editor_state.dart';
+import '../debug/hero_editor_overlay.dart';
+
+/// Set to [false] before building for release — the overlay renders nothing
+/// and the [HeroEditorState] is never allocated.
+const bool kHeroEditorEnabled = true;
 
 // ─────────────────────────────────────────────
 //  HeroSection
 // ─────────────────────────────────────────────
 
-class HeroSection extends StatelessWidget {
+class HeroSection extends StatefulWidget {
   const HeroSection({super.key});
 
   @override
+  State<HeroSection> createState() => _HeroSectionState();
+}
+
+// TODO: connect HeroItemConfig values to product Positioned offsets in _ProductScene.
+class _HeroSectionState extends State<HeroSection> {
+  late final HeroEditorState? _editorState =
+      kHeroEditorEnabled ? HeroEditorState() : null;
+
+  @override
+  void dispose() {
+    _editorState?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final body = _buildBody(context);
+    if (!kHeroEditorEnabled || _editorState == null) return body;
+    return Stack(
+      children: [body, HeroEditorOverlay(state: _editorState)],
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final isWide = screenW > 800;
@@ -33,7 +62,10 @@ class HeroSection extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: heroHeight),
         child: Stack(
-          alignment: Alignment.center,
+          // Wide stays centred; compact (mobile portrait) is biased upward so
+          // the product group sits higher (uses the lower free space) instead
+          // of floating in the vertical centre.
+          alignment: Alignment(0.0, isWide ? 0.0 : -0.6),
           children: [
             // ── Background ── decorative: must not absorb touch/scroll.
             Positioned.fill(
@@ -360,7 +392,8 @@ class _SceneProduct extends StatefulWidget {
 }
 
 class _SceneProductState extends State<_SceneProduct> {
-  bool _hovered = false;
+  bool _hovered = false; // desktop pointer hover
+  bool _pressed = false; // mobile tap / touch press
 
   @override
   Widget build(BuildContext context) {
@@ -373,14 +406,20 @@ class _SceneProductState extends State<_SceneProduct> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 230),
-        curve: Curves.easeOut,
-        alignment: Alignment.bottomCenter,
-        scale: _hovered ? 1.04 : 1.0,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
+      // Tap feedback for touch devices (no navigation, purely visual).
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 170),
+          curve: Curves.easeOut,
+          alignment: Alignment.bottomCenter,
+          scale: _pressed ? 1.07 : (_hovered ? 1.04 : 1.0),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
             // Silhouette drop shadow — follows the product outline,
             // so there is no rectangular "card" halo behind the PNG.
             Transform.translate(
@@ -401,6 +440,7 @@ class _SceneProductState extends State<_SceneProduct> {
             ),
             image,
           ],
+          ),
         ),
       ),
     );
@@ -478,7 +518,8 @@ class _PhoneInScene extends StatefulWidget {
 }
 
 class _PhoneInSceneState extends State<_PhoneInScene> {
-  bool _hovered = false;
+  bool _hovered = false; // desktop pointer hover
+  bool _pressed = false; // mobile tap / touch press
 
   @override
   Widget build(BuildContext context) {
@@ -488,12 +529,18 @@ class _PhoneInSceneState extends State<_PhoneInScene> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 230),
-        curve: Curves.easeOut,
-        alignment: Alignment.bottomCenter,
-        scale: _hovered ? 1.04 : 1.0,
-        child: Container(
+      // Tap feedback for touch devices (no navigation, purely visual).
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 170),
+          curve: Curves.easeOut,
+          alignment: Alignment.bottomCenter,
+          scale: _pressed ? 1.06 : (_hovered ? 1.04 : 1.0),
+          child: Container(
           width: w,
           decoration: BoxDecoration(
             color: const Color(0xFF111113),
@@ -559,6 +606,7 @@ class _PhoneInSceneState extends State<_PhoneInScene> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -661,7 +709,7 @@ class _HeroTextContent extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 48),
+        SizedBox(height: isWide ? 48 : 28),
         Wrap(
           alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
           spacing: 14,
