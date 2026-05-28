@@ -1,14 +1,16 @@
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../debug/hero_editor_state.dart';
 import '../debug/hero_editor_overlay.dart';
 
-/// Set to [false] before building for release — the overlay renders nothing
-/// and the [HeroEditorState] is never allocated.
-const bool kHeroEditorEnabled = false;
+/// Debug-only gate: the hero positioning overlay shows in debug builds and is
+/// compiled out of release (overlay renders nothing, [HeroEditorState] is never
+/// allocated). Set to a literal `false` to hide it in debug too.
+const bool kHeroEditorEnabled = kDebugMode;
 
 // ─────────────────────────────────────────────
 //  HeroSection
@@ -290,16 +292,16 @@ class _ProductScene extends StatelessWidget {
             (phoneConfig?.scale ?? 1.0);
 
         // ── Baked Hero Editor fine-tune (mobile/portrait) + live editor ─────
-        // The baked constants reproduce the approved mobile placement without
+        // Baked compact offsets reproduce the tuned mobile placement without
         // the editor; the (config?.x ?? 0) term stays so the editor still
-        // nudges from here when re-enabled. Desktop (wide) is left untouched.
+        // nudges from here when re-enabled. Desktop (wide) is never baked.
         // Positive y = down in screen coords → subtract from Positioned.bottom.
-        final pillowDx = (compact ? 25.0 : 0.0) + (pillowConfig?.x ?? 0.0);
-        final pillowDy = (compact ? 15.0 : 0.0) + (pillowConfig?.y ?? 0.0);
-        final moduleDx = (compact ? 35.0 : 0.0) + (moduleConfig?.x ?? 0.0);
-        final moduleDy = (compact ? 25.0 : 0.0) + (moduleConfig?.y ?? 0.0);
+        final pillowDx = (compact ? 15.0 : 0.0) + (pillowConfig?.x ?? 0.0);
+        final pillowDy = (compact ? -60.0 : 0.0) + (pillowConfig?.y ?? 0.0);
+        final moduleDx = (compact ? 20.0 : 0.0) + (moduleConfig?.x ?? 0.0);
+        final moduleDy = (compact ? -55.0 : 0.0) + (moduleConfig?.y ?? 0.0);
         final phoneDx = (compact ? -15.0 : 0.0) + (phoneConfig?.x ?? 0.0);
-        final phoneDy = (compact ? 35.0 : 0.0) + (phoneConfig?.y ?? 0.0);
+        final phoneDy = (compact ? -45.0 : 0.0) + (phoneConfig?.y ?? 0.0);
 
         // ── Editor rotations — additive on top of any built-in angle ────────
         final pillowRotRad =
@@ -843,13 +845,20 @@ class _GlowHeadline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fontSize = isWide ? 78.0 : 52.0;
-    return Stack(
+    // Mobile headline ~12% smaller; the FittedBox below additionally scales the
+    // whole word down if a device/web font renders wider than Chrome's metrics,
+    // so "SchnurrPurr" can never break a single letter onto a new line.
+    final fontSize = isWide ? 78.0 : 46.0;
+
+    final headline = Stack(
       alignment: isWide ? Alignment.centerLeft : Alignment.center,
       children: [
         Text(
           'SchnurrPurr',
           textAlign: isWide ? TextAlign.left : TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.visible,
           style: TextStyle(
             fontSize: fontSize,
             fontWeight: FontWeight.bold,
@@ -870,6 +879,9 @@ class _GlowHeadline extends StatelessWidget {
           child: Text(
             'SchnurrPurr',
             textAlign: isWide ? TextAlign.left : TextAlign.center,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.visible,
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.bold,
@@ -879,6 +891,16 @@ class _GlowHeadline extends StatelessWidget {
           ),
         ),
       ],
+    );
+
+    // Desktop: unchanged. Mobile: scale-to-fit so the single word always fits
+    // on one line regardless of the runtime font width (no per-letter wrap).
+    if (isWide) return headline;
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.center,
+      clipBehavior: Clip.none, // keep the soft glow halo around the letters
+      child: headline,
     );
   }
 }
