@@ -35,8 +35,14 @@ class _HeroSectionState extends State<HeroSection> {
   Widget build(BuildContext context) {
     final body = _buildBody(context);
     if (!kHeroEditorEnabled || _editorState == null) return body;
+    // body (non-positioned) sizes the Stack; the overlay is pinned to that
+    // size with Positioned.fill so it gets bounded constraints even though the
+    // hero lives in an unbounded-height page scroll.
     return Stack(
-      children: [body, HeroEditorOverlay(state: _editorState)],
+      children: [
+        body,
+        Positioned.fill(child: HeroEditorOverlay(state: _editorState)),
+      ],
     );
   }
 
