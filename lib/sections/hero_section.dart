@@ -15,7 +15,14 @@ class HeroSection extends StatelessWidget {
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
     final isWide = screenW > 800;
+    final isPortrait = screenH >= screenW;
     final heroHeight = screenH.clamp(620.0, 1020.0);
+
+    // Background: the portrait shot (with the tall foreground table) is used
+    // only on narrow portrait screens; everything else keeps the landscape one.
+    final bgAsset = (!isWide && isPortrait)
+        ? 'assets/images/horizont.png'
+        : 'assets/images/landingback.png';
 
     return SizedBox(
       width: double.infinity,
@@ -24,7 +31,7 @@ class HeroSection extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // ── Background ────────────────────────────────────
-          Image.asset('assets/images/landingback.png', fit: BoxFit.cover),
+          Image.asset(bgAsset, fit: BoxFit.cover),
 
           // ── Warm vertical depth overlay ───────────────────
           Container(
@@ -58,29 +65,36 @@ class HeroSection extends StatelessWidget {
             ),
           ),
 
-          // ── Content (vertically centred, scrolls if too tall) ──
-          SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: heroHeight),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isWide ? 56 : 24,
-                  vertical: 40,
-                ),
-                // MainAxisAlignment.center + the min-height above centre
-                // the block; the leading spacer nudges it down toward the
-                // table on roomy (wide) viewports.
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isWide) SizedBox(height: heroHeight * 0.12),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: isWide ? 1200 : 560,
-                      ),
-                      child: isWide ? _WideLayout() : _NarrowLayout(),
+          // ── Content (centred within the safe area, scrolls if too tall) ──
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  // Centre within the *available* (safe-area) height so the
+                  // notch / home-indicator and short iPhone-Safari viewports
+                  // never clip the content; it simply scrolls if it can't fit.
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWide ? 56 : 24,
+                      vertical: isWide ? 40 : 28,
                     ),
-                  ],
+                    // MainAxisAlignment.center + the min-height above centre
+                    // the block; the leading spacer nudges it down toward the
+                    // table on roomy (wide) viewports.
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (isWide) SizedBox(height: heroHeight * 0.12),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isWide ? 1200 : 560,
+                          ),
+                          child: isWide ? _WideLayout() : _NarrowLayout(),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -130,8 +144,8 @@ class _NarrowLayout extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const _HeroTextContent(isWide: false),
-        const SizedBox(height: 36),
-        _ProductScene(sceneHeight: 280),
+        const SizedBox(height: 28),
+        _ProductScene(sceneHeight: 300, compact: true),
         const SizedBox(height: 12),
         _SceneLabel(),
       ],
@@ -145,7 +159,9 @@ class _NarrowLayout extends StatelessWidget {
 
 class _ProductScene extends StatelessWidget {
   final double sceneHeight;
-  const _ProductScene({required this.sceneHeight});
+  // Portrait/mobile: smaller pillow, taller phone, gap kept open.
+  final bool compact;
+  const _ProductScene({required this.sceneHeight, this.compact = false});
 
   // Bottom transparent padding of each PNG, as a fraction of the displayed
   // width (measured from the asset alpha bounds). Lets us align the *visible*
@@ -161,15 +177,22 @@ class _ProductScene extends StatelessWidget {
         final h = sceneHeight;
 
         // Relative sizes: pillow dominates, module medium, phone smallest.
-        final pillowW = (w * 0.52).clamp(120.0, 290.0);
-        final moduleW = (w * 0.38).clamp(86.0, 205.0);
-        final phoneW = (w * 0.24).clamp(64.0, 140.0);
+        // Compact (portrait) shrinks the pillow and grows the phone a touch.
+        final pillowW = (w * (compact ? 0.46 : 0.52)).clamp(110.0, 290.0);
+        final moduleW = (w * (compact ? 0.40 : 0.38)).clamp(96.0, 205.0);
+        final phoneW = (w * (compact ? 0.27 : 0.24)).clamp(72.0, 150.0);
 
-        // Horizontal: pillow left, module centre-front, phone right but kept
-        // close to the module (not flush to the edge).
+        // Horizontal: pillow left, module centre-front.
         final pillowLeft = -w * 0.02;
-        final moduleLeft = w * 0.27;
+        final moduleLeft = w * (compact ? 0.25 : 0.27);
+        final moduleVisRight = moduleLeft + moduleW * 0.856; // 599/700
+
+        // Phone placement. Desktop keeps its fixed right margin (unchanged);
+        // compact anchors the phone a fixed gap right of the module so the
+        // gap can't collapse at narrow widths (clamped min sizes would eat it).
         final phoneRight = w * 0.15;
+        final phoneGap = (w * 0.03).clamp(14.0, 60.0);
+        final phoneLeft = moduleVisRight + phoneGap;
 
         // One shared ground line — every product's *visible* bottom lands
         // here, so all three share the same baseline. Lifted enough that the
@@ -182,7 +205,8 @@ class _ProductScene extends StatelessWidget {
         // Visible-centre x of each product (for glow + contact shadows).
         final pillowCx = pillowLeft + pillowW * 0.47;
         final moduleCx = moduleLeft + moduleW * 0.48;
-        final phoneCx = w - phoneRight - phoneW / 2;
+        final phoneCx =
+            compact ? phoneLeft + phoneW / 2 : w - phoneRight - phoneW / 2;
 
         final glowSize = moduleW * 2.2;
 
@@ -227,9 +251,10 @@ class _ProductScene extends StatelessWidget {
                 ),
               ),
 
-              // ── Phone — right, close to module, slight tilt ──
+              // ── Phone — close to module, slight tilt, never clipped ──
               Positioned(
-                right: phoneRight,
+                left: compact ? phoneLeft : null,
+                right: compact ? null : phoneRight,
                 bottom: phoneBottom,
                 child: Transform.rotate(
                   angle: 0.045, // ≈ 2.5°
