@@ -67,6 +67,19 @@ class _HeroSectionState extends State<HeroSection> {
     final isPortrait = screenH >= screenW;
     final heroHeight = screenH.clamp(620.0, 1020.0);
 
+    // Per-device baked product placement. Phone (narrow) and desktop keep their
+    // exact existing values; iPad portrait / landscape get their own. The live
+    // editor still nudges additively on top of whichever placement is active.
+    // Breakpoints: ≤800 phone · >800 portrait = iPad portrait · >800 landscape
+    // <1280 = iPad landscape · ≥1280 landscape = desktop.
+    final placement = screenW <= 800
+        ? _HeroPlacement.phone
+        : (isPortrait
+              ? _HeroPlacement.ipadPortrait
+              : (screenW < 1280
+                    ? _HeroPlacement.ipadLandscape
+                    : _HeroPlacement.desktop));
+
     // Background: the portrait shot (with the tall foreground table) is used
     // only on narrow portrait screens; everything else keeps the landscape one.
     final bgAsset = (!isWide && isPortrait)
@@ -155,11 +168,13 @@ class _HeroSectionState extends State<HeroSection> {
                       ),
                       child: isWide
                           ? _WideLayout(
+                              placement: placement,
                               pillowConfig: _editorState?.pillowConfig,
                               moduleConfig: _editorState?.moduleConfig,
                               phoneConfig: _editorState?.phoneConfig,
                             )
                           : _NarrowLayout(
+                              placement: placement,
                               pillowConfig: _editorState?.pillowConfig,
                               moduleConfig: _editorState?.moduleConfig,
                               phoneConfig: _editorState?.phoneConfig,
@@ -181,10 +196,16 @@ class _HeroSectionState extends State<HeroSection> {
 // ─────────────────────────────────────────────
 
 class _WideLayout extends StatelessWidget {
+  final _HeroPlacement placement;
   final HeroItemConfig? pillowConfig;
   final HeroItemConfig? moduleConfig;
   final HeroItemConfig? phoneConfig;
-  const _WideLayout({this.pillowConfig, this.moduleConfig, this.phoneConfig});
+  const _WideLayout({
+    required this.placement,
+    this.pillowConfig,
+    this.moduleConfig,
+    this.phoneConfig,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +221,7 @@ class _WideLayout extends StatelessWidget {
             children: [
               _ProductScene(
                 sceneHeight: 400,
+                placement: placement,
                 pillowConfig: pillowConfig,
                 moduleConfig: moduleConfig,
                 phoneConfig: phoneConfig,
@@ -219,10 +241,16 @@ class _WideLayout extends StatelessWidget {
 // ─────────────────────────────────────────────
 
 class _NarrowLayout extends StatelessWidget {
+  final _HeroPlacement placement;
   final HeroItemConfig? pillowConfig;
   final HeroItemConfig? moduleConfig;
   final HeroItemConfig? phoneConfig;
-  const _NarrowLayout({this.pillowConfig, this.moduleConfig, this.phoneConfig});
+  const _NarrowLayout({
+    required this.placement,
+    this.pillowConfig,
+    this.moduleConfig,
+    this.phoneConfig,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -234,6 +262,7 @@ class _NarrowLayout extends StatelessWidget {
         _ProductScene(
           sceneHeight: 240,
           compact: true,
+          placement: placement,
           pillowConfig: pillowConfig,
           moduleConfig: moduleConfig,
           phoneConfig: phoneConfig,
@@ -249,15 +278,61 @@ class _NarrowLayout extends StatelessWidget {
 //  Lifestyle product scene (no glass card)
 // ─────────────────────────────────────────────
 
+/// Baked per-device product placement (offsets in px + scale multipliers).
+/// The live Hero Editor adds its config on top of these, so re-tuning always
+/// starts from the active device's baked values.
+class _HeroPlacement {
+  final double pillowDx, pillowDy;
+  final double moduleDx, moduleDy, moduleScale;
+  final double phoneDx, phoneDy, phoneScale;
+  const _HeroPlacement({
+    this.pillowDx = 0,
+    this.pillowDy = 0,
+    this.moduleDx = 0,
+    this.moduleDy = 0,
+    this.moduleScale = 1.0,
+    this.phoneDx = 0,
+    this.phoneDy = 0,
+    this.phoneScale = 1.0,
+  });
+
+  // Phone (narrow / compact layout).
+  static const phone = _HeroPlacement(
+    pillowDx: 15, pillowDy: -60,
+    moduleDx: 20, moduleDy: -55,
+    phoneDx: -15, phoneDy: -45, phoneScale: 0.9,
+  );
+  // Desktop (large landscape).
+  static const desktop = _HeroPlacement(
+    pillowDy: 55,
+    moduleDy: 65,
+    phoneDx: -10, phoneDy: 70,
+  );
+  // iPad portrait.
+  static const ipadPortrait = _HeroPlacement(
+    pillowDx: 80, pillowDy: 100,
+    moduleDx: 100, moduleDy: 100, moduleScale: 0.9,
+    phoneDx: -10, phoneDy: 95, phoneScale: 0.55,
+  );
+  // iPad landscape.
+  static const ipadLandscape = _HeroPlacement(
+    pillowDx: 15, pillowDy: 50,
+    moduleDx: 20, moduleDy: 65, moduleScale: 0.9,
+    phoneDx: -10, phoneDy: 60, phoneScale: 0.85,
+  );
+}
+
 class _ProductScene extends StatelessWidget {
   final double sceneHeight;
   final bool compact;
+  final _HeroPlacement placement;
   // Null when the editor is disabled — all transforms default to identity.
   final HeroItemConfig? pillowConfig;
   final HeroItemConfig? moduleConfig;
   final HeroItemConfig? phoneConfig;
   const _ProductScene({
     required this.sceneHeight,
+    required this.placement,
     this.compact = false,
     this.pillowConfig,
     this.moduleConfig,
@@ -285,23 +360,24 @@ class _ProductScene extends StatelessWidget {
             (pillowConfig?.scale ?? 1.0);
         final moduleW =
             (w * (compact ? 0.40 : 0.38)).clamp(96.0, 205.0) *
+            placement.moduleScale *
             (moduleConfig?.scale ?? 1.0);
         final phoneW =
             (w * (compact ? 0.27 : 0.24)).clamp(72.0, 150.0) *
-            (compact ? 0.9 : 1.0) * // baked Hero Editor scale (mobile)
+            placement.phoneScale * // baked per-device Hero Editor scale
             (phoneConfig?.scale ?? 1.0);
 
-        // ── Baked Hero Editor fine-tune (mobile/portrait) + live editor ─────
-        // Baked compact offsets reproduce the tuned mobile placement without
-        // the editor; the (config?.x ?? 0) term stays so the editor still
-        // nudges from here when re-enabled. Desktop (wide) is never baked.
+        // ── Baked per-device placement + live editor offset ─────────────────
+        // placement.* carries the tuned offset for the active device class
+        // (phone / iPad portrait / iPad landscape / desktop); the
+        // (config?.x ?? 0) term lets the editor nudge from there when enabled.
         // Positive y = down in screen coords → subtract from Positioned.bottom.
-        final pillowDx = (compact ? 15.0 : 0.0) + (pillowConfig?.x ?? 0.0);
-        final pillowDy = (compact ? -60.0 : 55.0) + (pillowConfig?.y ?? 0.0);
-        final moduleDx = (compact ? 20.0 : 0.0) + (moduleConfig?.x ?? 0.0);
-        final moduleDy = (compact ? -55.0 : 65.0) + (moduleConfig?.y ?? 0.0);
-        final phoneDx = (compact ? -15.0 : -10.0) + (phoneConfig?.x ?? 0.0);
-        final phoneDy = (compact ? -45.0 : 70.0) + (phoneConfig?.y ?? 0.0);
+        final pillowDx = placement.pillowDx + (pillowConfig?.x ?? 0.0);
+        final pillowDy = placement.pillowDy + (pillowConfig?.y ?? 0.0);
+        final moduleDx = placement.moduleDx + (moduleConfig?.x ?? 0.0);
+        final moduleDy = placement.moduleDy + (moduleConfig?.y ?? 0.0);
+        final phoneDx = placement.phoneDx + (phoneConfig?.x ?? 0.0);
+        final phoneDy = placement.phoneDy + (phoneConfig?.y ?? 0.0);
 
         // ── Editor rotations — additive on top of any built-in angle ────────
         final pillowRotRad =
