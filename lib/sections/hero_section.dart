@@ -328,7 +328,7 @@ class _HeroPlacement {
   );
 }
 
-class _ProductScene extends StatelessWidget {
+class _ProductScene extends StatefulWidget {
   final double sceneHeight;
   final bool compact;
   final _HeroPlacement placement;
@@ -345,6 +345,12 @@ class _ProductScene extends StatelessWidget {
     this.phoneConfig,
   });
 
+  @override
+  State<_ProductScene> createState() => _ProductSceneState();
+}
+
+class _ProductSceneState extends State<_ProductScene>
+    with SingleTickerProviderStateMixin {
   // Bottom transparent padding of each PNG, as a fraction of the displayed
   // width (measured from the asset alpha bounds). Lets us align the *visible*
   // feet on one ground line instead of the raw image boxes.
@@ -352,12 +358,29 @@ class _ProductScene extends StatelessWidget {
   static const double _moduleFoot =
       0.35; // purrmodul.png — body base, not the dangling strap
 
+  // Golden purr-wave ripple, fired when the sound module is tapped.
+  late final AnimationController _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1300),
+  );
+
+  @override
+  void dispose() {
+    _wave.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        final h = sceneHeight;
+        final h = widget.sceneHeight;
+        final compact = widget.compact;
+        final placement = widget.placement;
+        final pillowConfig = widget.pillowConfig;
+        final moduleConfig = widget.moduleConfig;
+        final phoneConfig = widget.phoneConfig;
 
         // ── Base sizes — editor scale applied multiplicatively ──────────────
         // When editor is disabled, configs are null and scale defaults to 1.0.
@@ -422,6 +445,7 @@ class _ProductScene extends StatelessWidget {
             : w - phoneBaseRight + phoneDx - phoneW / 2;
 
         final glowSize = moduleW * 2.2;
+        final waveSize = glowSize * 1.7; // ripples expand beyond the ambient glow
 
         return SizedBox(
           width: w,
@@ -438,6 +462,21 @@ class _ProductScene extends StatelessWidget {
                 // aura moves with the module when nudged.
                 bottom: baseLine + moduleW * 0.20 - moduleDy - glowSize / 2,
                 child: _GlowRings(size: glowSize),
+              ),
+
+              // ── Tap-triggered golden purr-wave ripple (around module) ────
+              Positioned(
+                left: moduleCx - waveSize / 2,
+                bottom: baseLine + moduleW * 0.20 - moduleDy - waveSize / 2,
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _wave,
+                    builder: (context, _) => CustomPaint(
+                      size: Size.square(waveSize),
+                      painter: _WavePainter(_wave.value),
+                    ),
+                  ),
+                ),
               ),
 
               // ── Pillow contact shadow ────────────────────────────────────
@@ -516,6 +555,7 @@ class _ProductScene extends StatelessWidget {
                     shadowAlpha: 120,
                     shadowBlur: 12,
                     shadowOffset: const Offset(8, 10),
+                    onTap: () => _wave.forward(from: 0),
                   ),
                 ),
               ),
@@ -572,6 +612,7 @@ class _SceneProduct extends StatefulWidget {
   final int shadowAlpha;
   final double shadowBlur;
   final Offset shadowOffset;
+  final VoidCallback? onTap;
 
   const _SceneProduct({
     required this.assetPath,
@@ -579,6 +620,7 @@ class _SceneProduct extends StatefulWidget {
     this.shadowAlpha = 95,
     this.shadowBlur = 14,
     this.shadowOffset = const Offset(6, 14),
+    this.onTap,
   });
 
   @override
@@ -603,6 +645,7 @@ class _SceneProductState extends State<_SceneProduct> {
       // Tap feedback for touch devices (no navigation, purely visual).
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
         onTapDown: (_) => setState(() => _pressed = true),
         onTapUp: (_) => setState(() => _pressed = false),
         onTapCancel: () => setState(() => _pressed = false),
@@ -639,6 +682,38 @@ class _SceneProductState extends State<_SceneProduct> {
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────
+//  Tap-triggered golden purr-wave ripples
+// ─────────────────────────────────────────────
+
+class _WavePainter extends CustomPainter {
+  final double t; // 0 = idle; animates 0→1 on each module tap
+  _WavePainter(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (t <= 0.0 || t >= 1.0) return; // nothing while idle / settled
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = size.width / 2;
+    const rings = 3;
+    for (var k = 0; k < rings; k++) {
+      final start = k * 0.16; // stagger the ripples
+      final lp = ((t - start) / (1.0 - start)).clamp(0.0, 1.0);
+      if (lp <= 0.0) continue;
+      final r = maxR * (0.22 + 0.78 * lp); // expand outward
+      final fade = 1.0 - lp; // fade as it grows
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0 + 2.2 * fade
+        ..color = AppColors.gold.withAlpha((150 * fade).round());
+      canvas.drawCircle(center, r, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter oldDelegate) => oldDelegate.t != t;
 }
 
 // ─────────────────────────────────────────────
