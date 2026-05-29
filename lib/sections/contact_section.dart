@@ -49,38 +49,11 @@ class ContactSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 48),
-                isWide
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          _ContactCard(
-                            icon: Icons.language_rounded,
-                            label: 'Website',
-                            value: 'schnurrpurr.com',
-                          ),
-                          SizedBox(width: 24),
-                          _ContactCard(
-                            icon: Icons.mail_rounded,
-                            label: 'E-Mail',
-                            value: 'hello@schnurrpurr.com',
-                          ),
-                        ],
-                      )
-                    : Column(
-                        children: const [
-                          _ContactCard(
-                            icon: Icons.language_rounded,
-                            label: 'Website',
-                            value: 'schnurrpurr.com',
-                          ),
-                          SizedBox(height: 16),
-                          _ContactCard(
-                            icon: Icons.mail_rounded,
-                            label: 'E-Mail',
-                            value: 'hello@schnurrpurr.com',
-                          ),
-                        ],
-                      ),
+                const _ContactCard(
+                  icon: Icons.mail_rounded,
+                  label: 'E-Mail',
+                  value: 'hello@schnurrpurr.com',
+                ),
                 const SizedBox(height: 64),
                 const Divider(color: AppColors.divider),
                 const SizedBox(height: 24),
