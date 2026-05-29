@@ -316,15 +316,15 @@ class _HeroPlacement {
   );
   // iPad portrait.
   static const ipadPortrait = _HeroPlacement(
-    pillowDx: -35, pillowDy: 65, pillowScale: 1.5,
-    moduleDx: 30, moduleDy: 80, moduleScale: 1.395,
-    phoneDx: 70, phoneDy: 80, phoneScale: 1.1, phoneRotDeg: 2.0,
+    pillowDx: -35, pillowDy: 50, pillowScale: 1.5,
+    moduleDx: 30, moduleDy: 65, moduleScale: 1.395,
+    phoneDx: 70, phoneDy: 65, phoneScale: 1.1, phoneRotDeg: 2.0,
   );
   // iPad landscape.
   static const ipadLandscape = _HeroPlacement(
-    pillowDx: 15, pillowDy: 50,
-    moduleDx: 20, moduleDy: 65, moduleScale: 0.9,
-    phoneDx: -10, phoneDy: 60, phoneScale: 0.85,
+    pillowDx: 15, pillowDy: 35,
+    moduleDx: 20, moduleDy: 50, moduleScale: 0.9,
+    phoneDx: -10, phoneDy: 45, phoneScale: 0.85,
   );
 }
 
