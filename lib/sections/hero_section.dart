@@ -63,19 +63,23 @@ class _HeroSectionState extends State<HeroSection> {
   Widget _buildBody(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
-    final isWide = screenW > 800;
     final isPortrait = screenH >= screenW;
+    // iPad portrait: portrait AND clearly wider than a phone (phones are < 600
+    // wide in portrait, iPads are 768+). It uses the wide (side-by-side) layout,
+    // which is what its placement was tuned for — so 768-wide iPads count too.
+    final isTabletPortrait = isPortrait && screenW >= 600;
+    final isWide = screenW > 800 || isTabletPortrait;
     final heroHeight = screenH.clamp(620.0, 1020.0);
 
     // Per-device baked product placement. Phone (narrow) and desktop keep their
     // exact existing values; iPad portrait / landscape get their own. The live
     // editor still nudges additively on top of whichever placement is active.
-    // Breakpoints: ≤800 phone · >800 portrait = iPad portrait · >800 landscape
-    // <1280 = iPad landscape · ≥1280 landscape = desktop.
-    final placement = screenW <= 800
-        ? _HeroPlacement.phone
-        : (isPortrait
-              ? _HeroPlacement.ipadPortrait
+    // Classes: portrait≥600 = iPad portrait · ≤800 (landscape/small) = phone ·
+    // landscape <1280 = iPad landscape · ≥1280 = desktop.
+    final placement = isTabletPortrait
+        ? _HeroPlacement.ipadPortrait
+        : (screenW <= 800
+              ? _HeroPlacement.phone
               : (screenW < 1280
                     ? _HeroPlacement.ipadLandscape
                     : _HeroPlacement.desktop));
