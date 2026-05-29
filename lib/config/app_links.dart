@@ -10,4 +10,7 @@ class AppLinks {
 
   static const String shop =
       'https://www.healing-balance.com/produkt/schnurrpurr-das-beruhigende-schlafkissen-mit-app-bluetooth/';
+
+  static const String email = 'hello@schnurrpurr.com';
+  static const String mailto = 'mailto:hello@schnurrpurr.com';
 }

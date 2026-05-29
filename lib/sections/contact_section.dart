@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/app_links.dart';
 import '../theme/app_theme.dart';
 
 class ContactSection extends StatelessWidget {
@@ -49,10 +51,11 @@ class ContactSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 48),
-                const _ContactCard(
+                _ContactCard(
                   icon: Icons.mail_rounded,
                   label: 'E-Mail',
-                  value: 'hello@schnurrpurr.com',
+                  value: AppLinks.email,
+                  onTap: () => launchUrl(Uri.parse(AppLinks.mailto)),
                 ),
                 const SizedBox(height: 64),
                 const Divider(color: AppColors.divider),
@@ -77,16 +80,18 @@ class _ContactCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   const _ContactCard({
     required this.icon,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -130,6 +135,12 @@ class _ContactCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(onTap: onTap, child: card),
     );
   }
 }

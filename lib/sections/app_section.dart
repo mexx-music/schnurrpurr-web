@@ -118,17 +118,17 @@ class _WidePhoneShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Primary: s4 — Sound Selection
+        // s4 — Sound Selection
         _PhoneMockup(
           imagePath: 'assets/images/screens/s4.png',
-          phoneWidth: 185,
+          phoneWidth: 175,
           glowColor: AppColors.primary,
         ),
         const SizedBox(width: 16),
-        // Secondary: s2 — lifestyle/emotional
+        // s2 — lifestyle/emotional (same size as s4)
         _PhoneMockup(
           imagePath: 'assets/images/screens/s2.png',
-          phoneWidth: 145,
+          phoneWidth: 175,
           glowColor: AppColors.gold,
         ),
       ],
@@ -150,7 +150,7 @@ class _NarrowPhoneShowcase extends StatelessWidget {
         Center(
           child: _PhoneMockup(
             imagePath: 'assets/images/screens/s4.png',
-            phoneWidth: 210,
+            phoneWidth: 195,
             glowColor: AppColors.primary,
           ),
         ),
@@ -158,7 +158,7 @@ class _NarrowPhoneShowcase extends StatelessWidget {
         Center(
           child: _PhoneMockup(
             imagePath: 'assets/images/screens/s2.png',
-            phoneWidth: 165,
+            phoneWidth: 195,
             glowColor: AppColors.gold,
           ),
         ),
