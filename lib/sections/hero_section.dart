@@ -3,9 +3,20 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/app_links.dart';
 import '../theme/app_theme.dart';
 import '../debug/hero_editor_state.dart';
 import '../debug/hero_editor_overlay.dart';
+
+/// Opens an external link — new tab on web, external app elsewhere.
+Future<void> _openLink(String url) async {
+  await launchUrl(
+    Uri.parse(url),
+    mode: LaunchMode.externalApplication,
+    webOnlyWindowName: '_blank',
+  );
+}
 
 /// Debug-only gate: the hero positioning overlay shows in debug builds and is
 /// compiled out of release (overlay renders nothing, [HeroEditorState] is never
@@ -980,14 +991,14 @@ class _HeroTextContent extends StatelessWidget {
             _HoverCtaButton(
               label: 'App Store',
               icon: Icons.apple,
-              onPressed: () {},
+              onPressed: () => _openLink(AppLinks.appStore),
             ),
             _HoverCtaButton(
               label: 'Google Play',
               icon: Icons.android,
-              onPressed: () {},
+              onPressed: () => _openLink(AppLinks.googlePlay),
             ),
-            const _ComingSoonBadge(),
+            const _ShopButton(),
           ],
         ),
       ],
@@ -1132,43 +1143,54 @@ class _HoverCtaButtonState extends State<_HoverCtaButton> {
 }
 
 // ─────────────────────────────────────────────
-//  Coming soon badge
+//  Shop button (outlined) → Healing-Balance shop
 // ─────────────────────────────────────────────
 
-class _ComingSoonBadge extends StatefulWidget {
-  const _ComingSoonBadge();
+class _ShopButton extends StatefulWidget {
+  const _ShopButton();
 
   @override
-  State<_ComingSoonBadge> createState() => _ComingSoonBadgeState();
+  State<_ShopButton> createState() => _ShopButtonState();
 }
 
-class _ComingSoonBadgeState extends State<_ComingSoonBadge> {
+class _ShopButtonState extends State<_ShopButton> {
   bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 15),
-        decoration: BoxDecoration(
-          color: _hovered ? AppColors.gold.withAlpha(20) : Colors.transparent,
-          border: Border.all(
-            color: _hovered ? AppColors.gold : AppColors.gold.withAlpha(128),
-            width: 1.5,
+      child: GestureDetector(
+        onTap: () => _openLink(AppLinks.shop),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 15),
+          decoration: BoxDecoration(
+            color: _hovered ? AppColors.gold.withAlpha(20) : Colors.transparent,
+            border: Border.all(
+              color: _hovered ? AppColors.gold : AppColors.gold.withAlpha(128),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(8),
           ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Text(
-          'Coming soon',
-          style: TextStyle(
-            color: AppColors.gold,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.storefront_rounded, color: AppColors.gold, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Shop',
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),
