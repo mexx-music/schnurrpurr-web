@@ -286,18 +286,20 @@ class _NarrowLayout extends StatelessWidget {
 /// The live Hero Editor adds its config on top of these, so re-tuning always
 /// starts from the active device's baked values.
 class _HeroPlacement {
-  final double pillowDx, pillowDy;
+  final double pillowDx, pillowDy, pillowScale;
   final double moduleDx, moduleDy, moduleScale;
-  final double phoneDx, phoneDy, phoneScale;
+  final double phoneDx, phoneDy, phoneScale, phoneRotDeg;
   const _HeroPlacement({
     this.pillowDx = 0,
     this.pillowDy = 0,
+    this.pillowScale = 1.0,
     this.moduleDx = 0,
     this.moduleDy = 0,
     this.moduleScale = 1.0,
     this.phoneDx = 0,
     this.phoneDy = 0,
     this.phoneScale = 1.0,
+    this.phoneRotDeg = 0,
   });
 
   // Phone (narrow / compact layout).
@@ -314,9 +316,9 @@ class _HeroPlacement {
   );
   // iPad portrait.
   static const ipadPortrait = _HeroPlacement(
-    pillowDx: 80, pillowDy: 100,
-    moduleDx: 100, moduleDy: 100, moduleScale: 0.9,
-    phoneDx: -10, phoneDy: 95, phoneScale: 0.55,
+    pillowDx: -35, pillowDy: 65, pillowScale: 1.5,
+    moduleDx: 30, moduleDy: 80, moduleScale: 1.395,
+    phoneDx: 70, phoneDy: 80, phoneScale: 1.1, phoneRotDeg: 2.0,
   );
   // iPad landscape.
   static const ipadLandscape = _HeroPlacement(
@@ -361,6 +363,7 @@ class _ProductScene extends StatelessWidget {
         // When editor is disabled, configs are null and scale defaults to 1.0.
         final pillowW =
             (w * (compact ? 0.46 : 0.52)).clamp(110.0, 290.0) *
+            placement.pillowScale *
             (pillowConfig?.scale ?? 1.0);
         final moduleW =
             (w * (compact ? 0.40 : 0.38)).clamp(96.0, 205.0) *
@@ -388,9 +391,11 @@ class _ProductScene extends StatelessWidget {
             (pillowConfig?.rotationDeg ?? 0.0) * (math.pi / 180);
         final moduleRotRad =
             (moduleConfig?.rotationDeg ?? 0.0) * (math.pi / 180);
-        // Phone keeps its built-in 2.5° tilt; editor adds on top.
+        // Phone keeps its built-in 2.5° tilt; per-device + editor add on top.
         final phoneRotRad =
-            0.045 + (phoneConfig?.rotationDeg ?? 0.0) * (math.pi / 180);
+            0.045 +
+            (placement.phoneRotDeg + (phoneConfig?.rotationDeg ?? 0.0)) *
+                (math.pi / 180);
 
         // ── Horizontal base positions ────────────────────────────────────────
         final pillowLeft = -w * 0.02 + pillowDx;
