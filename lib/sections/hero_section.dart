@@ -79,16 +79,21 @@ class _HeroSectionState extends State<HeroSection> {
     // wide in portrait, iPads are 768+). It uses the wide (side-by-side) layout,
     // which is what its placement was tuned for — so 768-wide iPads count too.
     final isTabletPortrait = isPortrait && screenW >= 600;
-    final isWide = screenW > 800 || isTabletPortrait;
+    // Phone landscape: landscape with a short viewport (< 500). iPads/desktops
+    // in landscape are much taller, so this cleanly isolates a real phone.
+    final isPhoneLandscape = !isPortrait && screenH < 500;
+    final isWide = screenW > 800 || isTabletPortrait || isPhoneLandscape;
     final heroHeight = screenH.clamp(620.0, 1020.0);
 
-    // Per-device baked product placement. Phone (narrow) and desktop keep their
-    // exact existing values; iPad portrait / landscape get their own. The live
-    // editor still nudges additively on top of whichever placement is active.
-    // Classes: portrait≥600 = iPad portrait · ≤800 (landscape/small) = phone ·
-    // landscape <1280 = iPad landscape · ≥1280 = desktop.
+    // Per-device baked product placement. The live editor still nudges
+    // additively on top of whichever placement is active.
+    // Classes: portrait≥600 = iPad portrait · landscape & height<500 = phone
+    // landscape · ≤800 = phone (portrait) · landscape <1280 = iPad landscape ·
+    // ≥1280 = desktop.
     final placement = isTabletPortrait
         ? _HeroPlacement.ipadPortrait
+        : isPhoneLandscape
+        ? _HeroPlacement.phoneLandscape
         : (screenW <= 800
               ? _HeroPlacement.phone
               : (screenW < 1280
@@ -330,6 +335,12 @@ class _HeroPlacement {
     pillowDx: -35, pillowDy: 50, pillowScale: 1.5,
     moduleDx: 30, moduleDy: 65, moduleScale: 1.395,
     phoneDx: 70, phoneDy: 65, phoneScale: 1.1, phoneRotDeg: 2.0,
+  );
+  // Phone landscape.
+  static const phoneLandscape = _HeroPlacement(
+    pillowDx: 20, pillowDy: 0, pillowScale: 1.3,
+    moduleDx: 50, moduleDy: 5, moduleScale: 0.9,
+    phoneDx: 25, phoneDy: 10, phoneScale: 0.7225, phoneRotDeg: 3.0,
   );
   // iPad landscape.
   static const ipadLandscape = _HeroPlacement(
