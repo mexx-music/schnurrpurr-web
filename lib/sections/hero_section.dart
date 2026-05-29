@@ -302,11 +302,11 @@ class _HeroPlacement {
     this.phoneRotDeg = 0,
   });
 
-  // Phone (narrow / compact layout).
+  // Phone (narrow / compact layout — portrait).
   static const phone = _HeroPlacement(
-    pillowDx: 15, pillowDy: -60,
-    moduleDx: 20, moduleDy: -55,
-    phoneDx: -15, phoneDy: -45, phoneScale: 0.9,
+    pillowDx: 15, pillowDy: -60, pillowScale: 1.3,
+    moduleDx: 40, moduleDy: -55,
+    phoneDx: -15, phoneDy: -45, phoneScale: 0.765,
   );
   // Desktop (large landscape).
   static const desktop = _HeroPlacement(
