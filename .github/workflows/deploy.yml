@@ -26,9 +26,10 @@ jobs:
         run: flutter pub get
 
       - name: Build web
+        # base-href / for the custom domain schnurrpurr.com (see web/CNAME).
         # --pwa-strategy=none disables the service worker so a new deploy is
         # picked up on the next load instead of serving a stale cached build.
-        run: flutter build web --release --base-href /schnurrpurr-web/ --pwa-strategy=none
+        run: flutter build web --release --base-href / --pwa-strategy=none
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
