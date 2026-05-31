@@ -36,6 +36,9 @@ class PillowSection extends StatelessWidget {
                 isWide
                     ? _PillowRowWide()
                     : const _PillowRowNarrow(),
+                const SizedBox(height: 56),
+                // ── How it works (module → pillow insertion) ────
+                _PillowHowItWorks(isWide: isWide),
                 const SizedBox(height: 72),
                 // ── Divider ─────────────────────────────────────
                 const _GoldDivider(),
@@ -127,7 +130,8 @@ class _PillowContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'Soft comfort combined with calming purr sound and gentle vibration.',
+          'Soft plush pillow designed to hold the SchnurrPurr core module '
+          'securely and comfortably.',
           style: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 17,
@@ -138,20 +142,22 @@ class _PillowContent extends StatelessWidget {
         const _FeatureRow(
           icon: Icons.bed_rounded,
           label: 'Cozy plush design',
-          description: 'Soft, washable cover — designed to be held and hugged.',
-        ),
-        const SizedBox(height: 16),
-        const _FeatureRow(
-          icon: Icons.vibration_rounded,
-          label: 'Sound & vibration',
-          description: 'Low-frequency purr vibration in sync with the app.',
-        ),
-        const SizedBox(height: 16),
-        const _FeatureRow(
-          icon: Icons.bluetooth_rounded,
-          label: 'Bluetooth connection',
           description:
-              'Pairs seamlessly with the SchnurrPurr app on iOS and Android.',
+              'Soft, washable cover — designed to be held, hugged and used in bed.',
+        ),
+        const SizedBox(height: 16),
+        const _FeatureRow(
+          icon: Icons.input_rounded,
+          label: 'Hidden module pocket',
+          description:
+              'Integrated pocket opening for placing the calming core module inside.',
+        ),
+        const SizedBox(height: 16),
+        const _FeatureRow(
+          icon: Icons.spa_rounded,
+          label: 'Comfort-focused shape',
+          description:
+              'Soft pillow form designed for relaxation, cuddling and bedtime use.',
         ),
       ],
     );
@@ -438,6 +444,162 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 13,
         letterSpacing: 4,
         fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Pillow "How it works" — 3 photo steps
+//  (Shows the core module being inserted into the pillow.)
+// ─────────────────────────────────────────────
+
+class _PillowHowItWorks extends StatelessWidget {
+  final bool isWide;
+  const _PillowHowItWorks({required this.isWide});
+
+  static const List<_PillowStep> _steps = [
+    _PillowStep(
+      number: 1,
+      assetPath: 'assets/images/pillow_open.png',
+      title: 'Open pillow pocket',
+      text: 'Open the discreet zipper on the back of the pillow.',
+    ),
+    _PillowStep(
+      number: 2,
+      assetPath: 'assets/images/pillow_module.png',
+      title: 'Insert core module',
+      text: 'Place the SchnurrPurr core module inside the pocket.',
+    ),
+    _PillowStep(
+      number: 3,
+      assetPath: 'assets/images/pillow.png',
+      title: 'Close and relax',
+      text:
+          'Close the zipper and enjoy comfort, purr sound and calming vibrations.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionLabel(label: 'How it works'),
+        const SizedBox(height: 16),
+        if (isWide)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < _steps.length; i++) ...[
+                if (i > 0) const SizedBox(width: 16),
+                Expanded(child: _PillowStepCard(step: _steps[i])),
+              ],
+            ],
+          )
+        else
+          Column(
+            children: [
+              for (var i = 0; i < _steps.length; i++) ...[
+                if (i > 0) const SizedBox(height: 14),
+                _PillowStepCard(step: _steps[i]),
+              ],
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _PillowStep {
+  final int number;
+  final String assetPath;
+  final String title;
+  final String text;
+  const _PillowStep({
+    required this.number,
+    required this.assetPath,
+    required this.title,
+    required this.text,
+  });
+}
+
+class _PillowStepCard extends StatelessWidget {
+  final _PillowStep step;
+  const _PillowStepCard({required this.step});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF120B06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Numbered badge + step title
+          Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.gold.withAlpha(38),
+                  border: Border.all(color: AppColors.gold.withAlpha(140)),
+                ),
+                child: Center(
+                  child: Text(
+                    '${step.number}',
+                    style: const TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  step.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Real product photo, contained on a dark backdrop (blends with both
+          // the photos' own dark background and the transparent pillow PNG).
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Container(
+                color: Colors.black,
+                child: Image.asset(step.assetPath, fit: BoxFit.contain),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            step.text,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }
